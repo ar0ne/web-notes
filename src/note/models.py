@@ -34,8 +34,8 @@ class UpdateNoteModel(BaseModel):
     A set of optional updates to be made to a document in the database.
     """
 
-    title: str = Field(...)
-    body: str = Field(...)
+    title: Optional[str] = None
+    body: Optional[str] = None
     model_config = ConfigDict(
         arbitrary_types_allowed=True,
         json_encoders={ObjectId: str},

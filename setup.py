@@ -18,11 +18,11 @@ with open(os.path.join(ROOT_PATH, "readme.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="dispatch",
+    name="notes",
     version=VERSION,
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="Netflix, Inc.",
+    author="anonymous",
     package_dir={"": "src"},
     packages=find_packages("src"),
     python_requires=">=3.12",

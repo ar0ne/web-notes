@@ -306,9 +306,9 @@ Resources:
             chmod +x entrypoint.sh
             
             cp .env.example .env
-            sed -i "s/USERNAME=/USERNAME=${DBUser}/g" .env
-            sed -i "s/PASSWORD=/PASSWORD=${DBPassword}/g" .env
-            sed -i "s/HOST=/HOST=${DatabaseEC2.PrivateIp}/g" .env
+            sed -i "s/USERNAME=.*/USERNAME=${DBUser}/g" .env
+            sed -i "s/PASSWORD=.*/PASSWORD=${DBPassword}/g" .env
+            sed -i "s/HOST=.*/HOST=${DatabaseEC2.PrivateIp}/g" .env
             
             ./entrypoint.sh
 

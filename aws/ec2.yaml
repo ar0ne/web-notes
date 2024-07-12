@@ -105,7 +105,7 @@ Parameters:
     Type: String
     Default:
       |
-      amazon-linux-extras install docker -y
+      yum install docker -y
       service docker start
       systemctl enable docker
       usermod -a -G docker ec2-user
@@ -235,6 +235,24 @@ Resources:
         - Key: Resource Name
           Value: HTTPSecurityGroup
 
+  MongoDBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Mongo DB Security group
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: !Ref DBPort
+          ToPort: !Ref DBPort
+          CidrIp: !Ref PublicSubnetCIDR
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: MongoDBSecurityGroup
+
   PrivateSubnetNACL:
     Type: AWS::EC2::NetworkAcl
     Properties:
@@ -326,6 +344,7 @@ Resources:
       KeyName : !Ref SSHKeyPair
       SecurityGroupIds:
         - !Ref SSHSecurityGroup
+        - !Ref MongoDBSecurityGroup
       UserData:
         Fn::Base64:
           !Sub

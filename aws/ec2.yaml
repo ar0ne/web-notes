@@ -89,6 +89,10 @@ Parameters:
     Default: ami-06c68f701d8090592
     Description: AM ID for web app ec2 instance (e.g. ami-06c68f701d8090592)
 
+  SSHKeyPair:
+    Type: String
+    Description: Name of key pair for SSH connections to EC2 instances.
+
 Resources:
   VPC:
     Type: AWS::EC2::VPC
@@ -243,6 +247,7 @@ Resources:
     Properties:
       ImageId: !Ref WebAppEC2ImageId
       InstanceType: !Ref WebAppEC2InstanceType
+      KeyName: !Ref SSHKeyPair
       NetworkInterfaces:
         - AssociatePublicIpAddress: true
           DeviceIndex: 0
@@ -257,5 +262,6 @@ Resources:
       SubnetId: !Ref PrivateSubnet
       ImageId: !Ref DatabaseEC2ImageId
       InstanceType: !Ref DatabaseEC2InstanceType
+      KeyName : !Ref SSHKeyPair
       SecurityGroupIds:
         - !Ref EC2SecurityGroup

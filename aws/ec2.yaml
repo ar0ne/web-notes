@@ -80,17 +80,17 @@ Parameters:
     Description: Enter t2.micro or t2.nano. Default is t2.micro.
 
   WebAppEC2ImageId:
-    Type: String
+    Type: 'AWS::EC2::Image::Id'
     Default: ami-06c68f701d8090592
-    Description: AM ID for web app ec2 instance (e.g. ami-06c68f701d8090592)
+    Description: AM ID for web app ec2 instance
 
   DatabaseEC2ImageId:
-    Type: String
+    Type: 'AWS::EC2::Image::Id'
     Default: ami-06c68f701d8090592
-    Description: AM ID for web app ec2 instance (e.g. ami-06c68f701d8090592)
+    Description: AM ID for web app ec2 instance
 
   SSHKeyPair:
-    Type: String
+    Type: 'AWS::EC2::KeyPair::KeyName'
     Description: Name of key pair for SSH connections to EC2 instances.
 
 Resources:

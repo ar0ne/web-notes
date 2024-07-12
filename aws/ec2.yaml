@@ -275,7 +275,9 @@ Resources:
 
   WebAppEC2:
     Type: AWS::EC2::Instance
-    DependsOn: InternetGateway
+    DependsOn:
+      - InternetGateway
+      - DatabaseEC2
     Properties:
       ImageId: !Ref WebAppEC2ImageId
       InstanceType: !Ref WebAppEC2InstanceType
@@ -288,6 +290,32 @@ Resources:
             - !Ref SSHSecurityGroup
             - !Ref HTTPSecurityGroup
           SubnetId: !Ref PublicSubnet
+      UserData:
+        Fn::Base64:
+          !Sub
+          - |
+            #!/bin/bash
+            yum update -y
+            yum install -y pip
+            
+            # todo: use release
+            wget https://github.com/ar0ne/web-notes/archive/refs/heads/main.zip
+            unzip main.zip
+            cd web-notes-main/
+            pip install -r requirements/base.txt
+            chmod +x entrypoint.sh
+            
+            cp .env.example .env
+            sed -i "s/USERNAME=/USERNAME=${DBUser}/g" .env
+            sed -i "s/PASSWORD=/PASSWORD=${DBPassword}/g" .env
+            sed -i "s/HOST=/HOST=${DatabaseEC2.PrivateIp}/g" .env
+            
+            ./entrypoint.sh
+
+          - DbUser:
+              !Ref DBUser
+            DbPass:
+              !Ref DBPassword
 
   DatabaseEC2:
     Type: AWS::EC2::Instance
@@ -336,9 +364,9 @@ Resources:
       Size: 4
       VolumeType: gp2
 
-    MongoMountPoint:
-      Type: AWS::EC2::VolumeAttachment
-      Properties:
-        InstanceId: !Ref MongoInstance
-        VolumeId: !Ref MongoVolume
-        Device: /dev/xvdh
+  MongoMountPoint:
+    Type: AWS::EC2::VolumeAttachment
+    Properties:
+      InstanceId: !Ref DatabaseEC2
+      VolumeId: !Ref MongoVolume
+      Device: /dev/xvdh

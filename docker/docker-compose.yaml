@@ -8,3 +8,12 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: user
       MONGO_INITDB_ROOT_PASSWORD: pass
+
+#  core:
+#    image: web-notes
+#    depends_on:
+#      - mongodb
+#    env_file:
+#      - .env
+#    ports:
+#      - "8000:8000"

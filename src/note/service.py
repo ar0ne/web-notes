@@ -25,7 +25,7 @@ async def create_note(conn: AsyncIOMotorClient, note: NoteModel = Body(...)):
     """insert note record"""
     collection = get_collection(conn)
     new_note = await collection.insert_one(
-        note.model_dump(by_alias=True, exclude=["id"])
+        note.model_dump(by_alias=True, exclude={"id"})
     )
     created_note = await collection.find_one({"_id": new_note.inserted_id})
     return created_note

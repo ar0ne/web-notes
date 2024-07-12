@@ -1,0 +1,261 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: This template creates VPC with 2 public and private subnets, EC2 for db and backend, and required security groups, and NACLs.
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Networking configuration"
+        Parameters:
+          - AvailabilityZone
+          - VpcCIDR
+          - PublicSubnetCIDR
+          - PrivateSubnetCIDR
+      -
+        Label:
+          default: "Tags configuration"
+        Parameters:
+          - Environment
+          - ProjectName
+      - Label:
+          default: "Compute configuration"
+        Parameters:
+          - WebAppEC2InstanceType
+          - DatabaseEC2InstanceType
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment for the project. By default it's dev.
+    AllowedValues:
+      - dev
+      - prod
+
+  ProjectName:
+    Type: String
+    Default: notes
+    Description: Name of the project.
+
+  AvailabilityZone:
+    Type: String
+    Default: us-east-1a
+    Description: AWS availability zone. By default it's us-east-1a
+
+  VpcCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: CIDR for VPC. By default it's 10.0.0.0/16.
+
+  PublicSubnetCIDR:
+    Type: String
+    Default: 10.0.0.0/24
+    Description: CIDR for public subnet. By default it's 10.0.0.0/24.
+
+  PrivateSubnetCIDR:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR for public subnet. By default it's 10.0.2.0/24.
+
+  DBPort:
+    Type: Number
+    Default: 27017
+    Description: Database port. By default mongo db port is 27017.
+
+  WebAppEC2InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.nano
+    Description: Enter t2.micro or t2.nano. Default is t2.micro.
+
+  DatabaseEC2InstanceType:
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.nano
+    Description: Enter t2.micro or t2.nano. Default is t2.micro.
+
+  WebAppEC2ImageId:
+    Type: String
+    Default: ami-06c68f701d8090592
+    Description: AM ID for web app ec2 instance (e.g. ami-06c68f701d8090592)
+
+  DatabaseEC2ImageId:
+    Type: String
+    Default: ami-06c68f701d8090592
+    Description: AM ID for web app ec2 instance (e.g. ami-06c68f701d8090592)
+
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: VPC
+
+  PublicSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      CidrBlock: !Ref PublicSubnetCIDR
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: PublicSubnet
+
+  PrivateSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      CidrBlock: !Ref PrivateSubnetCIDR
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: PrivateSubnet
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: InternetGateway
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref VPC
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: RouteTable
+
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway
+      RouteTableId: !Ref RouteTable
+
+  PublicSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref RouteTable
+      SubnetId: !Ref PublicSubnet
+
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+# todo: add load balancer
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          CidrIp: 0.0.0.0/0
+# todo: use different port for SSH
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: EC2SecurityGroup
+
+  PrivateSubnetNACL:
+    Type: AWS::EC2::NetworkAcl
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: PrivateSubnetNACL
+
+  PrivateSubnetNACLEntry1:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: !Ref PublicSubnetCIDR
+      Egress: false
+      NetworkAclId: !Ref PrivateSubnetNACL
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 100
+
+  PrivateSubnetNACLExit1:
+    Type: AWS::EC2::NetworkAclEntry
+    Properties:
+      CidrBlock: 0.0.0.0/0
+      Egress: true
+      NetworkAclId: !Ref PrivateSubnetNACL
+      Protocol: -1
+      RuleAction: allow
+      RuleNumber: 100
+
+  PrivateSubnetNACLAssociation:
+    Type: AWS::EC2::SubnetNetworkAclAssociation
+    Properties:
+      NetworkAclId: !Ref PrivateSubnetNACL
+      SubnetId: !Ref PrivateSubnet
+
+  WebAppEC2:
+    Type: AWS::EC2::Instance
+    DependsOn: InternetGateway
+    Properties:
+      ImageId: !Ref WebAppEC2ImageId
+      InstanceType: !Ref WebAppEC2InstanceType
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          DeleteOnTermination: true
+          GroupSet:
+            - !Ref EC2SecurityGroup
+          SubnetId: !Ref PublicSubnet
+
+  DatabaseEC2:
+    Type: AWS::EC2::Instance
+    Properties:
+      SubnetId: !Ref PrivateSubnet
+      ImageId: !Ref DatabaseEC2ImageId
+      InstanceType: !Ref DatabaseEC2InstanceType
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup

@@ -58,11 +58,6 @@ Parameters:
     Default: 10.0.2.0/24
     Description: CIDR for public subnet. By default it's 10.0.2.0/24.
 
-  DBPort:
-    Type: Number
-    Default: 27017
-    Description: Database port. By default mongo db port is 27017.
-
   WebAppEC2InstanceType:
     Type: String
     Default: t2.micro
@@ -92,6 +87,29 @@ Parameters:
   SSHKeyPair:
     Type: 'AWS::EC2::KeyPair::KeyName'
     Description: Name of key pair for SSH connections to EC2 instances.
+
+  DBPort:
+    Type: Number
+    Default: 27017
+    Description: Database port. By default mongo db port is 27017.
+
+  DBUser:
+    Type: String
+    Description: MongoDB user name.
+
+  DBPassword:
+    Type: String
+    Description: MongoDB user password.
+
+  InstallDocker:
+    Type: String
+    Default:
+      |
+      amazon-linux-extras install docker -y
+      service docker start
+      systemctl enable docker
+      usermod -a -G docker ec2-user
+      chmod 666 /var/run/docker.sock
 
 Resources:
   VPC:
@@ -179,17 +197,12 @@ Resources:
       RouteTableId: !Ref RouteTable
       SubnetId: !Ref PublicSubnet
 
-  EC2SecurityGroup:
+  SSHSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Security group
       VpcId: !Ref VPC
       SecurityGroupIngress:
-# todo: add load balancer
-        - IpProtocol: tcp
-          FromPort: 8000
-          ToPort: 8000
-          CidrIp: 0.0.0.0/0
 # todo: use different port for SSH
         - IpProtocol: tcp
           FromPort: 22
@@ -201,7 +214,26 @@ Resources:
         - Key: ProjectName
           Value: !Ref ProjectName
         - Key: Resource Name
-          Value: EC2SecurityGroup
+          Value: SSHSecurityGroup
+
+  HTTPSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group
+      VpcId: !Ref VPC
+      SecurityGroupIngress:
+# todo: add load balancer
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: HTTPSecurityGroup
 
   PrivateSubnetNACL:
     Type: AWS::EC2::NetworkAcl
@@ -253,7 +285,8 @@ Resources:
           DeviceIndex: 0
           DeleteOnTermination: true
           GroupSet:
-            - !Ref EC2SecurityGroup
+            - !Ref SSHSecurityGroup
+            - !Ref HTTPSecurityGroup
           SubnetId: !Ref PublicSubnet
 
   DatabaseEC2:
@@ -264,4 +297,48 @@ Resources:
       InstanceType: !Ref DatabaseEC2InstanceType
       KeyName : !Ref SSHKeyPair
       SecurityGroupIds:
-        - !Ref EC2SecurityGroup
+        - !Ref SSHSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub
+          - |
+            #!/bin/bash
+            yum update -y
+            
+            # Mount Drive
+            mkdir /data
+            mkfs -t xfs /dev/xvdh
+            mount /dev/xvdh /data
+            
+            # You can verify the mount is working with lsblk
+            
+            ${InstallDocker}
+            
+            # bind_ip=0.0.0.0: Make mongo available externally
+            docker run -d \
+              -p ${DBPort}:${DBPort} \
+              -e bind_ip=0.0.0.0 \
+              -e MONGO_INITDB_ROOT_USERNAME=${DBUser} \
+              -e MONGO_INITDB_ROOT_PASSWORD=${DBPassword} \
+              -v=/data:/data/db \
+            mongo
+          - DbUser:
+              !Ref DBUser
+            DbPass:
+              !Ref DBPassword
+            InstallDocker:
+              !Ref InstallDocker
+
+  MongoVolume:
+    Type: AWS::EC2::Volume
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      Size: 4
+      VolumeType: gp2
+
+    MongoMountPoint:
+      Type: AWS::EC2::VolumeAttachment
+      Properties:
+        InstanceId: !Ref MongoInstance
+        VolumeId: !Ref MongoVolume
+        Device: /dev/xvdh

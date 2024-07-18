@@ -22,7 +22,14 @@ Metadata:
           default: "Compute configuration"
         Parameters:
           - WebAppEC2InstanceType
+          - WebAppEC2ImageId
+          - DatabaseEC2ImageId
           - DatabaseEC2InstanceType
+          - SSHKeyPair
+          - DBPort
+          - DBUser
+          - DBPassword
+          - InstallDocker
 
 Parameters:
   Environment:
@@ -171,7 +178,7 @@ Resources:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
 
-  RouteTable:
+  PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
@@ -181,7 +188,19 @@ Resources:
         - Key: ProjectName
           Value: !Ref ProjectName
         - Key: Resource Name
-          Value: RouteTable
+          Value: PublicRouteTable
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: PrivateRouteTable
 
   PublicRoute:
     Type: AWS::EC2::Route
@@ -189,13 +208,19 @@ Resources:
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
-      RouteTableId: !Ref RouteTable
+      RouteTableId: !Ref PublicRouteTable
 
   PublicSubnetRouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref RouteTable
+      RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet
+
+  PrivateSubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      SubnetId: !Ref PrivateSubnet
 
   SSHSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -268,7 +293,7 @@ Resources:
   PrivateSubnetNACLEntry1:
     Type: AWS::EC2::NetworkAclEntry
     Properties:
-      CidrBlock: !Ref PublicSubnetCIDR
+      CidrBlock: 0.0.0.0/0
       Egress: false
       NetworkAclId: !Ref PrivateSubnetNACL
       Protocol: -1
@@ -290,6 +315,32 @@ Resources:
     Properties:
       NetworkAclId: !Ref PrivateSubnetNACL
       SubnetId: !Ref PrivateSubnet
+
+  NATGatewayEIP:
+     DependsOn: VPC
+     Type: AWS::EC2::EIP
+     Properties:
+        Domain: vpc
+
+  NATGateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NATGatewayEIP.AllocationId
+      SubnetId: !Ref PublicSubnet
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+        - Key: ProjectName
+          Value: !Ref ProjectName
+        - Key: Resource Name
+          Value: NATGateway
+
+  RouteNATGateway:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NATGateway
 
   WebAppEC2:
     Type: AWS::EC2::Instance
@@ -330,9 +381,9 @@ Resources:
             
             ./entrypoint.sh
 
-          - DbUser:
+          - DBUser:
               !Ref DBUser
-            DbPass:
+            DBPassword:
               !Ref DBPassword
 
   DatabaseEC2:
@@ -369,10 +420,12 @@ Resources:
               -e MONGO_INITDB_ROOT_PASSWORD=${DBPassword} \
               -v=/data:/data/db \
             mongo
-          - DbUser:
+          - DBUser:
               !Ref DBUser
-            DbPass:
+            DBPassword:
               !Ref DBPassword
+            DBPort:
+              !Ref DBPort
             InstallDocker:
               !Ref InstallDocker
 

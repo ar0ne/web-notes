@@ -8,3 +8,9 @@ e.g. use `docker-compose up -d`)
 4. create `.env` file (see `.env.example`)
 5. run FastApi \
 `uvicorn src.main:app --reload`
+
+
+
+# Docker
+
+docker build -t web-notes .

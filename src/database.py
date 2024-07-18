@@ -2,7 +2,7 @@ import logging
 
 from motor.motor_asyncio import AsyncIOMotorClient
 
-from src import config
+from src.config import get_settings
 
 
 class DataBase:
@@ -18,10 +18,11 @@ async def get_database() -> AsyncIOMotorClient:
 
 async def connect_to_mongo():
     logging.info("Connecting to database...")
+    settings = get_settings()
     db.client = AsyncIOMotorClient(
-        config.MONGODB_URL,
-        maxPoolSize=config.MAX_CONNECTIONS_COUNT,
-        minPoolSize=config.MIN_CONNECTIONS_COUNT,
+        settings.mongodb_url,
+        maxPoolSize=settings.max_connections_count,
+        minPoolSize=settings.min_connections_count,
     )
     logging.info("Database connected！")
 

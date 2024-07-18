@@ -3,13 +3,15 @@ from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from pymongo import ReturnDocument
 
-from src import config
+from src.config import get_settings
 from src.note.models import NoteCollection, NoteModel, UpdateNoteModel
+
+settings = get_settings()
 
 
 def get_collection(db) -> AsyncIOMotorCollection:
-    return db.get_database(config.MONGODB_DATABASE).get_collection(
-        config.MONGODB_NOTE_COLLECTION
+    return db.get_database(settings.mongodb_database).get_collection(
+        settings.mongodb_note_collection
     )
 
 

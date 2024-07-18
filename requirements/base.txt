@@ -60,6 +60,8 @@ pydantic==2.8.2
     # via fastapi
 pydantic-core==2.20.1
     # via pydantic
+pydantic-settings==2.3.4
+
 pygments==2.18.0
     # via rich
 pymongo==4.8.0

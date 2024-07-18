@@ -1,21 +1,31 @@
 import logging
 
-from starlette.config import Config
+from functools import lru_cache
 
-config = Config(".env")
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-LOG_LEVEL = config("LOG_LEVEL", default=logging.WARNING)
-ENV = config("ENV", default="local")
 
-MAX_CONNECTIONS_COUNT = config("MAX_CONNECTIONS_COUNT", cast=int, default=10)
-MIN_CONNECTIONS_COUNT = config("MIN_CONNECTIONS_COUNT", cast=int, default=10)
+class Settings(BaseSettings):
+    log_level: int = logging.WARNING
+    env: str = "local"
+    model_config = SettingsConfigDict(env_file=".env")
 
-MONGODB_USERNAME = config("MONGODB_USERNAME", default="")
-MONGODB_PASSWORD = config("MONGODB_PASSWORD", default="")
-MONGODB_HOST = config("MONGODB_HOST", default="")
-MONGODB_PORT = config("MONGODB_PORT", cast=int, default=27017)
-MONGODB_DATABASE = config("MONGODB_DATABASE", default="app")
+    max_connections_count: int = 10
+    min_connections_count: int = 10
 
-MONGODB_URL = f"mongodb://{MONGODB_USERNAME}:{MONGODB_PASSWORD}@{MONGODB_HOST}:{MONGODB_PORT}/{MONGODB_DATABASE}?retryWrites=true&w=majority&authSource=admin"
+    mongodb_username: str
+    mongodb_password: str
+    mongodb_host: str = ""
+    mongodb_port: int = 27017
+    mongodb_database: str = "app"
 
-MONGODB_NOTE_COLLECTION = config("NOTE_COLLECTION", default="notes")
+    mongodb_note_collection: str = "notes"
+
+    @property
+    def mongodb_url(self) -> str:
+        return f"mongodb://{self.mongodb_username}:{self.mongodb_password}@{self.mongodb_host}:{self.mongodb_port}/{self.mongodb_database}?retryWrites=true&w=majority&authSource=admin"
+
+
+@lru_cache
+def get_settings():
+    return Settings()

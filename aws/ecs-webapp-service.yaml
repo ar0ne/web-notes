@@ -17,9 +17,8 @@ Parameters:
     Description: Name of the project.
 
   WebAppDockerImage:
-    Description: The Docker image to pull from your container registry
+    Description: The Docker image to pull from your container registry (<AWS account ID>.dkr.ecr.us-east-1.amazonaws.com/<YOUR_SERVICE>:latest)
     Type: String
-    Default: "AWS account ID.dkr.ecr.us-east-1.amazonaws.com/parity:latest"
 
   VPC:
     Type: AWS::EC2::VPC::Id
@@ -48,28 +47,17 @@ Parameters:
     Default: 8000
 
 Resources:
-  WebAppService:
-    Type: AWS::ECS::Service
-    DependsOn: Listener
-    Properties:
-      Cluster: !Ref Cluster
-      Role: !Ref ServiceRole
-      DesiredCount: !Ref DesiredCount
-      TaskDefinition: !Ref WebAppTaskDefinition
-
-      LoadBalancers:
-        - ContainerName: "parity-service"
-          ContainerPort: !Ref WebAppPort
-          TargetGroupArn: !Ref TargetGroup
 
   WebAppTaskDefinition:
     Type: AWS::ECS::TaskDefinition
     Properties:
-      Family: parity-service
       TaskRoleArn: !Ref TaskRole
+      ExecutionRoleArn: !Ref ServiceRole
       NetworkMode: bridge
+      Cpu: 256
+      Memory: 512
       ContainerDefinitions:
-        - Name: parity-service
+        - Name: webnotes-service
           Essential: true
           Image: !Ref WebAppDockerImage
           Environment:
@@ -78,8 +66,6 @@ Resources:
           EnvironmentFiles:
             - Value: !Ref EnvFile
               Type: s3
-          Cpu: 256
-          MemoryReservation: 512
           PortMappings:
             - ContainerPort: !Ref WebAppPort
           LogConfiguration:
@@ -88,6 +74,19 @@ Resources:
               awslogs-group: !Ref AWS::StackName
               awslogs-region: !Ref AWS::Region
               awslogs-stream-prefix: !Ref Environment
+
+  WebAppService:
+    Type: AWS::ECS::Service
+    DependsOn: Listener
+    Properties:
+      Cluster: !Ref Cluster
+      Role: !Ref ServiceRole
+      DesiredCount: !Ref DesiredCount
+      TaskDefinition: !Ref WebAppTaskDefinition
+      LoadBalancers:
+        - ContainerName: webnotes-service
+          ContainerPort: !Ref WebAppPort
+          TargetGroupArn: !Ref TargetGroup
 
   CloudWatchLogsGroup:
     Type: AWS::Logs::LogGroup

@@ -34,12 +34,10 @@ Parameters:
   DBUsername:
     Type: String
     Description: MongoDB user name.
-    Default: user1
 
   DBPassword:
     Type: String
     Description: MongoDB user password.
-    Default: password89
 
   Subnet:
     Type: AWS::EC2::Subnet::Id

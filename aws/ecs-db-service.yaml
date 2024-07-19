@@ -1,0 +1,121 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This template deploys web notes app and mondoDB to ecs cluster.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment for the project. By default it's dev.
+    AllowedValues:
+      - dev
+      - prod
+
+  ProjectName:
+    Type: String
+    Default: notes
+    Description: Name of the project.
+
+  DatabaseDockerImage:
+    Description: The Docker image to pull database from Docker Hub
+    Type: String
+    Default: "mongo:latest"
+
+  Cluster:
+    Description: Please provide the ECS Cluster ID that this service should run on
+    Type: String
+
+  DesiredCount:
+    Description: How many instances of this task should we run across our cluster?
+    Type: Number
+    Default: 1
+
+  DBPort:
+    Type: Number
+    Default: 27017
+    Description: Database port. By default mongo db port is 27017.
+
+Resources:
+  DatabaseTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: db-service-cfn
+      ExecutionRoleArn: !Ref ServiceRole
+      TaskRoleArn: !Ref TaskRole
+      NetworkMode: awsvpc
+      ContainerDefinitions:
+        - Name: parity-service
+          Essential: true
+          Image: !Ref DatabaseDockerImage
+          Environment:
+            - Name: "region"
+              Value: !Ref AWS::Region
+          Cpu: 256
+          Memory: 512
+          MemoryReservation: 512
+          PortMappings:
+            - ContainerPort: !Ref DBPort
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref AWS::StackName
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref Environment
+
+  DatabaseService:
+    Type: AWS::ECS::Service
+    Properties:
+      ServiceName: db-service
+      Cluster: !Ref Cluster
+      DesiredCount: !Ref DesiredCount
+      TaskDefinition: !Ref DatabaseTaskDefinition
+      LaunchType: FARGATE
+
+  CloudWatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref AWS::StackName
+      RetentionInDays: 1
+
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ecs-task-${AWS::StackName}
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+            "Statement": [{
+                "Sid": "",
+                "Effect": "Allow",
+                "Principal": { "Service": [ "ecs-tasks.amazonaws.com" ]},
+                "Action": "sts:AssumeRole"
+            }]
+        }
+
+  ServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ecs-service-${AWS::StackName}
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": { "Service": [ "ecs.amazonaws.com" ]},
+                "Action": [ "sts:AssumeRole" ]
+            }]
+        }
+      Policies:
+        - PolicyName: !Sub ecs-service-${AWS::StackName}
+          PolicyDocument:
+            {
+              "Version": "2012-10-17",
+              "Statement": [ {
+                "Effect": "Allow",
+                "Action": [
+                  "ec2:AuthorizeSecurityGroupIngress",
+                  "ec2:Describe*",
+                ],
+                "Resource": "*"
+              } ]
+            }

@@ -1,0 +1,193 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: This template deploys web notes app and mondoDB to ecs cluster.
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    Description: Environment for the project. By default it's dev.
+    AllowedValues:
+      - dev
+      - prod
+
+  ProjectName:
+    Type: String
+    Default: notes
+    Description: Name of the project.
+
+  WebAppDockerImage:
+    Description: The Docker image to pull from your container registry
+    Type: String
+    Default: "AWS account ID.dkr.ecr.us-east-1.amazonaws.com/parity:latest"
+
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: Choose which VPC the Network Load Balancer should be deployed to
+
+  Subnets:
+    Description: Choose which subnets the Network Load Balancer should be deployed to
+    Type: List<AWS::EC2::Subnet::Id>
+
+  Cluster:
+    Description: Please provide the ECS Cluster ID that this service should run on
+    Type: String
+
+  DesiredCount:
+    Description: How many instances of this task should we run across our cluster?
+    Type: Number
+    Default: 1
+
+  EnvFile:
+    Description: ARN of environment file for web app in S3
+    Type: String
+
+  WebAppPort:
+    Description: Exposed port of the web app.
+    Type: Number
+    Default: 8000
+
+Resources:
+  WebAppService:
+    Type: AWS::ECS::Service
+    DependsOn: Listener
+    Properties:
+      Cluster: !Ref Cluster
+      Role: !Ref ServiceRole
+      DesiredCount: !Ref DesiredCount
+      TaskDefinition: !Ref WebAppTaskDefinition
+
+      LoadBalancers:
+        - ContainerName: "parity-service"
+          ContainerPort: !Ref WebAppPort
+          TargetGroupArn: !Ref TargetGroup
+
+  WebAppTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: parity-service
+      TaskRoleArn: !Ref TaskRole
+      NetworkMode: bridge
+      ContainerDefinitions:
+        - Name: parity-service
+          Essential: true
+          Image: !Ref WebAppDockerImage
+          Environment:
+            - Name: "region"
+              Value: !Ref AWS::Region
+          EnvironmentFiles:
+            - Value: !Ref EnvFile
+              Type: s3
+          Cpu: 256
+          MemoryReservation: 512
+          PortMappings:
+            - ContainerPort: !Ref WebAppPort
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref AWS::StackName
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: !Ref Environment
+
+  CloudWatchLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref AWS::StackName
+      RetentionInDays: 1
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Ref Environment
+      Type: network
+      Scheme: internal
+      Subnets: !Ref Subnets
+      Tags:
+        - Key: Name
+          Value: !Ref Environment
+
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    DependsOn: LoadBalancer
+    Properties:
+      VpcId: !Ref VPC
+      Port: !Ref WebAppPort
+      Protocol: TCP
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    DependsOn: LoadBalancer
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroup
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: !Ref WebAppPort
+      Protocol: TCP
+
+  # This IAM Role grants the task access to download files stored in S3
+  TaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ecs-task-${AWS::StackName}
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+            "Statement": [{
+                "Sid": "",
+                "Effect": "Allow",
+                "Principal": { "Service": [ "ecs-tasks.amazonaws.com" ]},
+                "Action": "sts:AssumeRole"
+            }]
+        }
+      Policies:
+        - PolicyName: !Sub ecs-task-${AWS::StackName}
+          PolicyDocument:
+            {
+              "Version": "2012-10-17",
+              "Statement": [ {
+                "Effect": "Allow",
+                "Action": [
+                  "s3:Get*",
+                  "s3:List*"
+                ],
+                "Resource": "*"
+              } ]
+            }
+
+  # This IAM Role grants the service access to register/unregister with the
+  # Network Load Balancer (NLB).
+  ServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ecs-service-${AWS::StackName}
+      Path: /
+      AssumeRolePolicyDocument: |
+        {
+            "Statement": [{
+                "Effect": "Allow",
+                "Principal": { "Service": [ "ecs.amazonaws.com" ]},
+                "Action": [ "sts:AssumeRole" ]
+            }]
+        }
+      Policies:
+        - PolicyName: !Sub ecs-service-${AWS::StackName}
+          PolicyDocument:
+            {
+              "Version": "2012-10-17",
+              "Statement": [ {
+                "Effect": "Allow",
+                "Action": [
+                  "ec2:AuthorizeSecurityGroupIngress",
+                  "ec2:Describe*",
+                  "elasticloadbalancing:DeregisterInstancesFromLoadBalancer",
+                  "elasticloadbalancing:Describe*",
+                  "elasticloadbalancing:RegisterInstancesWithLoadBalancer",
+                  "elasticloadbalancing:DeregisterTargets",
+                  "elasticloadbalancing:DescribeTargetGroups",
+                  "elasticloadbalancing:DescribeTargetHealth",
+                  "elasticloadbalancing:RegisterTargets"
+                ],
+                "Resource": "*"
+              } ]
+            }

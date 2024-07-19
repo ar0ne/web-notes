@@ -1,0 +1,18 @@
+[
+  {
+    "ParameterKey": "WebAppDockerImage",
+    "ParameterValue": "<your_aws_id>.dkr.ecr.us-east-1.amazonaws.com/webnotes"
+  },
+  {
+    "ParameterKey": "Subnet",
+    "ParameterValue": "subnet-12345"
+  },
+  {
+    "ParameterKey": "Cluster",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "EnvFile",
+    "ParameterValue": "arn:aws:s3:::your-bucket-name/.env"
+  }
+]

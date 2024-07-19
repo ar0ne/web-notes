@@ -1,0 +1,14 @@
+[
+  {
+    "ParameterKey": "DBPassword",
+    "ParameterValue": "password"
+  },
+  {
+    "ParameterKey": "DBUsername",
+    "ParameterValue": "user"
+  },
+  {
+    "ParameterKey": "Subnet",
+    "ParameterValue": "subnet-12345"
+  }
+]

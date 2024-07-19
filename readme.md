@@ -22,3 +22,20 @@ docker build -t webnotes .
 3. `docker tag webnotes:latest <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/webnotes:latest`
 
 4. `docker push <YOUR_AWS_ACCOUNT_ID>.dkr.ecr.us-east-1.amazonaws.com/webnotes:latest`
+
+
+# AWS ECS (Fargate)
+
+Create stack for cluster and database:
+
+`aws cloudformation create-stack --stack-name mongodb --template-body file://ecs-db-service.yaml --parameters file://vars/db.json --capabilities CAPABILITY_NAMED_IAM --region us-east-1`
+
+Update public IP of mongo database host and deploy `.env` file to s3 bucket:
+
+`aws s3 cp .env s3://<bucket-name>/.env`
+
+
+Clean up:
+
+`aws cloudformation delete-stack --stack-name mongodb --region us-east-1`
+`aws cloudformation delete-stack --stack-name webnotes --region us-east-1`

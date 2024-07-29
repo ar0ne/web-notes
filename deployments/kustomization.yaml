@@ -1,0 +1,4 @@
+resources:
+- inject/secret.yaml
+- mongodb-deployment.yaml
+- backend-deployment.yaml

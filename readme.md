@@ -60,8 +60,54 @@ To make it happen, you should upload `.env` file to your S3 bucket and provide A
 ## How to run it locally
 
 - activate virtualenv 
+
 - install dependencies \
+
 `pip install -r requirements/dev.txt`
+
 - create `.env` file (see `.env.example`)
+
 - run MongoDB locally or use docker, i.e. `docker-compose up -d`
+
 - run uvicorn (FastAPI) `uvicorn src.main:app --reload` or `./entrypoint.sh`.
+
+
+# Kubernetes
+
+- install `kubectl`
+
+- decide where you want to run your cluster (e.g. `minikube`)
+
+- push `webnotes:latest` to own Docker hub or AWS ECR
+
+```
+docker tag webnotes:latest ar0ne/webnotes:latest
+docker push ar0ne/webnotes:latest
+```
+
+- `cd deployments` and run `kubectl apply -k ./`
+
+- wait until pods get running (`kubectl get pods`)
+
+- if all right, now you can reach the app with curl. 
+For that you need to find port of your service and minikube IP.
+
+```
+PORT=$(kubectl get services/webnotes -o go-template='{{(index .spec.ports 0).nodePort}}')
+curl http://"$(minikube ip)":$PORT/api/v1/notes/
+```
+
+You should get shomething like `{"notes":[]}` if your local database is empty.
+
+Run and try again:
+
+```
+curl --request POST \
+  --url http://$(minikube ip):$PORT/api/v1/notes/ \
+  --header 'Content-Type: application/json' \
+  --data '{
+	"title": "idea123",
+	"body": "myidea"
+}'
+```
+

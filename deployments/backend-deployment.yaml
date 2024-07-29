@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webnotes
+  labels:
+    app: webnotes
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 8000
+  selector:
+    app: webnotes
+    tier: backend
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webnotes-backend
+  labels:
+    app: webnotes
+spec:
+  selector:
+    matchLabels:
+      app: webnotes
+      tier: backend
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: webnotes
+        tier: backend
+    spec:
+      containers:
+      - image: ar0ne/webnotes:latest 
+        name: backend
+        envFrom:
+        - secretRef:
+            name: webnotes-secret
+        ports:
+        - containerPort: 8080
+          name: backend
+
+

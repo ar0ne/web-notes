@@ -111,3 +111,6 @@ curl --request POST \
 }'
 ```
 
+- don't forget to cleanup cluster! 
+
+`kubectl delete -k ./`

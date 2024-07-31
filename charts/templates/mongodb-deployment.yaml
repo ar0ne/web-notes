@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongo-pv-claim
+  labels:
+    {{- include "mongodb.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "{{ .Values.MongoDB.pvClaimStorage }}"
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mongodb.fullname" . }}
+  labels:
+    {{- include "mongodb.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "mongodb.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: "Recreate"
+  template:
+    metadata:
+      labels:
+        {{- include "mongodb.labels" . | nindent 8 }}
+    spec:
+      containers:
+      - image: "{{ .Values.MongoDB.image.repository }}:{{ .Values.MongoDB.image.tag }}"
+        name: "mongo"
+        env:
+        - name: "MONGO_INITDB_ROOT_USERNAME"
+          valueFrom: 
+            secretKeyRef:
+              name: "{{ .Values.WebNotesApp.secretName }}"
+              key: "MONGODB_USERNAME"
+        - name: "MONGO_INITDB_ROOT_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Values.WebNotesApp.secretName }}"
+              key: "MONGODB_PASSWORD"
+        ports:
+          - containerPort: {{ .Values.MongoDB.service.port }}
+            name: "mongo-port"
+        volumeMounts:
+        - name: "mongo-persistent-storage"
+          mountPath: "/data/db"
+      volumes:
+      - name: "mongo-persistent-storage"
+        persistentVolumeClaim:
+          claimName: "mongo-pv-claim"
+
+

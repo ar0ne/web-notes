@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "webnotes.fullname" . }}
+  labels:
+    {{- include "webnotes.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.WebNotesApp.service.type }}
+  ports:
+    - port: {{ .Values.WebNotesApp.service.port | int }}
+      protocol: "TCP"
+      name: "app-port"
+  selector:
+    {{- include "webnotes.selectorLabels" . | nindent 4 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mongodb.fullname" . }}
+  labels:
+    {{- include "mongodb.labels" . | nindent 4}}
+spec:
+  type: {{ .Values.MongoDB.service.type }}
+  ports:
+    - port: {{ .Values.MongoDB.service.port | int }}
+      protocol: "TCP"
+      name: "mongodb-port"
+  selector:
+    {{- include "mongodb.selectorLabels" . | nindent 4 }}
+

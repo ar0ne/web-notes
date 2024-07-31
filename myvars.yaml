@@ -1,0 +1,3 @@
+mongodb:
+  userName: "user"
+  password: "password"

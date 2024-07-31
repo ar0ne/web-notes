@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "webnotes.fullname" . }}-test-connection"
+  labels:
+    {{- include "webnotes.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+spec:
+  containers:
+    - name: wget
+      image: busybox
+      command: ['wget']
+      args: ['{{ include "webnotes.fullname" . }}:{{ .Values.WebNotesApp.service.port }}']
+  restartPolicy: Never

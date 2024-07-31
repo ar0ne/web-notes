@@ -35,16 +35,16 @@ spec:
       - image: "{{ .Values.MongoDB.image.repository }}:{{ .Values.MongoDB.image.tag }}"
         name: "mongo"
         env:
-        - name: "MONGO_INITDB_ROOT_USERNAME"
+        - name: MONGO_INITDB_ROOT_USERNAME
           valueFrom: 
             secretKeyRef:
-              name: "{{ .Values.WebNotesApp.secretName }}"
-              key: "MONGODB_USERNAME"
-        - name: "MONGO_INITDB_ROOT_PASSWORD"
+              name: {{ .Values.WebNotesApp.secretName }}
+              key: MONGODB_USERNAME
+        - name: MONGO_INITDB_ROOT_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: "{{ .Values.WebNotesApp.secretName }}"
-              key: "MONGODB_PASSWORD"
+              name: {{ .Values.WebNotesApp.secretName }}
+              key: MONGODB_PASSWORD
         ports:
           - containerPort: {{ .Values.MongoDB.service.port }}
             name: "mongo-port"

@@ -16,7 +16,8 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "mongodb.fullname" . }}
+  # name: {{ include "mongodb.fullname" . }}
+  name: webnotes-mongo
   labels:
     {{- include "mongodb.labels" . | nindent 4}}
 spec:

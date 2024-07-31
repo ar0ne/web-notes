@@ -12,8 +12,6 @@ WebNotesApp:
 MongoDB:
   replicaCount: 1
   pvClaimStorage: "1Gi"
-  userName: ""
-  password: ""
   databaseName: "app"
   image:
     repository: mongo

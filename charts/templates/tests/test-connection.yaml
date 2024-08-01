@@ -11,5 +11,5 @@ spec:
     - name: wget
       image: busybox
       command: ['wget']
-      args: ['{{ include "webnotes.fullname" . }}:{{ .Values.WebNotesApp.service.port }}']
+      args: ['{{ include "webnotes.fullname" . }}:{{ .Values.service.port }}']
   restartPolicy: Never

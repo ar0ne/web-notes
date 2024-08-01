@@ -5,27 +5,28 @@ metadata:
   labels:
     {{- include "webnotes.labels" . | nindent 4 }}
 spec:
-  type: {{ .Values.WebNotesApp.service.type }}
+  type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.WebNotesApp.service.port | int }}
-      protocol: "TCP"
-      name: "app-port"
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
   selector:
     {{- include "webnotes.selectorLabels" . | nindent 4 }}
+
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  # name: {{ include "mongodb.fullname" . }}
   name: webnotes-mongo
   labels:
-    {{- include "mongodb.labels" . | nindent 4}}
+    name: webnotes-mongo  
 spec:
-  type: {{ .Values.MongoDB.service.type }}
+  type: ClusterIP
   ports:
-    - port: {{ .Values.MongoDB.service.port | int }}
-      protocol: "TCP"
-      name: "mongodb-port"
+    - port: 27017
+      targetPort: 27017
+      protocol: TCP
+      name: mongo
   selector:
-    {{- include "mongodb.selectorLabels" . | nindent 4 }}
-
+    name: webnotes-mongo  

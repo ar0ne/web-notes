@@ -114,3 +114,22 @@ curl --request POST \
 - don't forget to cleanup cluster! 
 
 `kubectl delete -k ./`
+
+
+# Helm
+
+If you want to use [helm](https://helm.sh) to deploy app to the cluster. You could do following:
+
+
+Check if generated templates looks fine:
+
+```
+helm template charts/ --debug
+```
+
+Do not forget to update `credentials.yaml` if needed. To install charts:
+
+```
+helm install webnotes -f credentials.yaml ./charts
+```
+

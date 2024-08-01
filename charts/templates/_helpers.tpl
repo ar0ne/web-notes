@@ -1,23 +1,38 @@
+{{/*
+Expand the name of the chart.
+*/}}
 {{- define "webnotes.name" -}}
-webnotes
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
+{{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
 {{- define "webnotes.fullname" -}}
-webnotes
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
 {{- end }}
 
-{{- define "mongodb.name" -}}
-webnotes-mongo
-{{- end }}
-
-{{- define "mongodb.fullname" -}}
-webnotes-mongo
-{{- end }}
-
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
 {{- define "webnotes.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
+{{/*
+Common labels
+*/}}
 {{- define "webnotes.labels" -}}
 chart: {{ include "webnotes.chart" . }}
 {{ include "webnotes.selectorLabels" . }}
@@ -26,22 +41,21 @@ version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 {{- end }}
 
+{{/*
+Selector labels
+*/}}
 {{- define "webnotes.selectorLabels" -}}
 name: {{ include "webnotes.name" . }}
+instance: {{ .Release.Name }}
 {{- end }}
 
-{{- define "mongodb.chart" -}}
-{{- printf "%s-mongo-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "webnotes.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create }}
+{{- default (include "webnotes.fullname" .) .Values.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.serviceAccount.name }}
 {{- end }}
-
-{{- define "mongodb.labels" -}}
-chart: {{ include "mongodb.chart" . }}
-{{ include "mongodb.selectorLabels" . }}
-{{- if .Chart.AppVersion }}
-version: {{ .Chart.AppVersion | quote }}
-{{- end }}
-{{- end }}
-
-{{- define "mongodb.selectorLabels" -}}
-name: {{ include "mongodb.name" . }}
 {{- end }}
